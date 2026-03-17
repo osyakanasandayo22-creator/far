@@ -49,6 +49,7 @@ let matchUnsub = null;
 let activeTimers = new Set();
 let activeMatchToken = 0;
 let prepCountdownStarted = false;
+let localMatch = null;
 
 function $(id) {
   const el = document.getElementById(id);
@@ -270,6 +271,7 @@ async function cancelMatchmaking({ silent } = {}) {
   prepCountdownStarted = false;
   currentOpponent = null;
   currentMatchId = null;
+  localMatch = null;
   cleanupMatchSub();
 
   // queueを片付け（失敗しても体験は継続できる）
@@ -296,6 +298,7 @@ async function startMatchmaking() {
   prepCountdownStarted = false;
   currentOpponent = null;
   currentMatchId = null;
+  localMatch = null;
   cleanupMatchSub();
 
   navigate("/prep");
@@ -318,8 +321,37 @@ async function startMatchmaking() {
   try {
     await apiPost("/api/joinQueue", { uid: myUid, displayName: myName });
   } catch (e) {
-    setText(prepHint, "マッチング開始に失敗しました。通信状況を確認してください。");
-    setText(prepStatus, "エラー");
+    // APIが存在しない（静的ホスティング/直開き等）場合でも体験できるようにフォールバック
+    const isProbablyNoApi =
+      String(e?.message || "").includes("APIエラー（404）") ||
+      String(e?.message || "").includes("Failed to fetch") ||
+      String(e?.message || "").includes("NetworkError");
+
+    if (!isProbablyNoApi) {
+      setText(prepHint, "マッチング開始に失敗しました。通信状況を確認してください。");
+      setText(prepStatus, "エラー");
+      return;
+    }
+
+    // ローカル対戦（ダミー）
+    const dummy = makeDummyOpponent();
+    const prompt = makePrompt();
+    const matchId = `local_${Math.random().toString(16).slice(2)}`;
+    localMatch = {
+      id: matchId,
+      prompt,
+      opponent: dummy,
+      myUid,
+      answers: { [myUid]: null, [dummy.uid]: null },
+      phase: "answer",
+      judge: null,
+    };
+    currentMatchId = matchId;
+    currentOpponent = dummy;
+
+    setText(prepStatus, "相手が見つかりました（ローカル対戦）");
+    setText(prepHint, "この環境ではオンラインマッチングAPIが無いので、ダミー相手と対戦します。");
+    startPrepSequence(dummy, { matchToken: activeMatchToken });
     return;
   }
 
@@ -387,6 +419,34 @@ async function submitAnswer(text) {
   if (!currentUser?.uid || !currentMatchId) return;
   const t = String(text || "").trim().slice(0, 30);
   if (!t) return;
+
+  // ローカル対戦（APIなし）
+  if (localMatch && localMatch.id === currentMatchId) {
+    const myUid = currentUser.uid;
+    localMatch.answers[myUid] = { text: t, at: Date.now() };
+
+    // 相手の回答を少し待って生成
+    if (!localMatch.answers[localMatch.opponent.uid]) {
+      later(900, () => {
+        if (!localMatch || localMatch.id !== currentMatchId) return;
+        if (getRoute() !== "/battle") return;
+        const pool = [
+          "遠雷の合図",
+          "月明かりの余韻",
+          "硝子越しのため息",
+          "白紙の約束",
+          "風の裏側の声",
+        ];
+        const pick = pool[(Math.random() * pool.length) | 0];
+        localMatch.answers[localMatch.opponent.uid] = { text: pick, at: Date.now() };
+        render();
+      });
+    }
+
+    render();
+    return;
+  }
+
   const ref = doc(db, "matches", currentMatchId);
   const uid = currentUser.uid;
   const key = `answers.${uid}`;
@@ -463,6 +523,19 @@ function render() {
     const nameEl = $("battleOpponentName");
     setText(nameEl, currentOpponent?.displayName || "（未設定）");
     setText($("battleRoomId"), currentMatchId ? currentMatchId.slice(0, 8) : "-");
+
+    if (localMatch && localMatch.id === currentMatchId) {
+      setText($("battlePrompt"), localMatch.prompt || "-");
+      const myUid = currentUser?.uid;
+      const oppUid = localMatch.opponent?.uid;
+      const myAns = myUid ? localMatch.answers?.[myUid]?.text || "" : "";
+      const oppAns = oppUid ? localMatch.answers?.[oppUid]?.text || "" : "";
+      const both = !!myAns && !!oppAns;
+      setHidden($("resultCard"), !both);
+      setText($("myAnswerText"), myAns || "-");
+      setText($("oppAnswerText"), oppAns || "-");
+      setText($("battlePhaseText"), both ? "両者の回答が揃いました。" : "相手の回答を待っています…");
+    }
   }
 }
 
