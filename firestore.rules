@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isPlayer() {
+      return signedIn()
+        && (resource.data.players is list)
+        && resource.data.players.size() == 2
+        && resource.data.players.hasAny([request.auth.uid]);
+    }
+
+    function topLevelChangedKeys() {
+      return request.resource.data.diff(resource.data).changedKeys();
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isSelf(uid);
+      allow delete: if false;
+    }
+
+    // queue: クライアントは自分のdocのみ触れる
+    match /queue/{uid} {
+      allow create, read, update, delete: if isSelf(uid);
+      allow list: if false;
+    }
+
+    match /matches/{matchId} {
+      // 参加者のみ閲覧
+      allow read: if isPlayer();
+      allow list: if false;
+
+      // ルーム作成・判定結果の書き込みはサーバー（Admin SDK）専用
+      allow create, delete: if false;
+
+      // クライアント更新は「自分の回答を1回だけ追加」＋「自分の表示名(playerNames)更新」だけ許可
+      allow update: if isPlayer() && validClientUpdate();
+    }
+
+    function validClientUpdate() {
+      let changed = topLevelChangedKeys();
+      // phase/judge 等を触らせない（サーバー専用）
+      if (changed.hasAny(['judge', 'phase', 'createdAt', 'judgedAt', 'players', 'prompt'])) {
+        return false;
+      }
+      // 変更許可するトップレベルは answers と playerNames のみ
+      if (!(changed.hasOnly(['answers', 'playerNames']))) return false;
+
+      let uid = request.auth.uid;
+
+      // playerNames は自分のキーだけ更新可（他人を更新できない）
+      if (changed.hasAny(['playerNames'])) {
+        if (!(request.resource.data.playerNames[uid] is string)) return false;
+        if (request.resource.data.playerNames[uid].size() < 1) return false;
+        if (request.resource.data.playerNames[uid].size() > 20) return false;
+      }
+
+      // answers を触っていないならここでOK（表示名更新のみ）
+      if (!changed.hasAny(['answers'])) return true;
+
+      // 既に自分の回答があるなら上書き禁止
+      if (resource.data.answers[uid] != null) return false;
+
+      // 自分のanswersがmapで存在すること
+      if (!(request.resource.data.answers[uid] is map)) return false;
+
+      let t = request.resource.data.answers[uid].text;
+      return t is string && t.size() >= 1 && t.size() <= 30;
+    }
+  }
+}
+

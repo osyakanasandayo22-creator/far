@@ -1,0 +1,14 @@
+{
+  "name": "farword-battle",
+  "private": true,
+  "version": "0.1.0",
+  "description": "遠い言葉を言うバトル v1",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.0",
+    "firebase-admin": "^13.0.2"
+  }
+}
+

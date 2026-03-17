@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>遠い言葉を言うバトル</title>
+    <meta name="description" content="オンライン型ワードセンスバトル（対戦形式）" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="bg" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <div class="topbar__inner">
+        <a class="brand" href="#/">
+          <span class="brand__mark" aria-hidden="true">遠</span>
+          <span class="brand__name">遠い言葉を言うバトル</span>
+        </a>
+
+        <div class="topbar__actions">
+          <div class="userchip" id="userchip" hidden>
+            <span class="userchip__label">ログイン中</span>
+            <span class="userchip__name" id="userNameText"></span>
+          </div>
+          <button class="btn btn--ghost" id="logoutBtn" type="button" hidden>
+            ログアウト
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="hero" id="homeView" aria-labelledby="heroTitle">
+        <div class="hero__card">
+          <h1 class="hero__title" id="heroTitle">
+            ひと言のセンスで、勝つ。
+          </h1>
+          <p class="hero__sub">
+            オンライン型のワードセンスバトル（対戦形式）を作っていきます。<br />
+            まずはホームとログイン、対戦開始の導線を用意しました。
+          </p>
+
+          <div class="hero__cta">
+            <button class="btn btn--primary" id="playBtn" type="button">
+              対戦する
+            </button>
+            <button class="btn btn--secondary" id="loginBtn" type="button">
+              ログイン
+            </button>
+          </div>
+
+          <div class="hero__meta">
+            <div class="pill">
+              <span class="pill__k">モード</span>
+              <span class="pill__v">1v1（予定）</span>
+            </div>
+            <div class="pill">
+              <span class="pill__k">形式</span>
+              <span class="pill__v">オンライン対戦（予定）</span>
+            </div>
+            <div class="pill">
+              <span class="pill__k">状態</span>
+              <span class="pill__v" id="authStateText">未ログイン</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2 class="panel__title">これから作るもの（仮）</h2>
+          <ul class="panel__list">
+            <li>お題に対して「遠い言葉」を出す</li>
+            <li>相手と同時提出・投票・勝敗</li>
+            <li>部屋作成/マッチング/観戦（任意）</li>
+          </ul>
+          <p class="panel__note">
+            今はUIと画面遷移の骨組みだけです。次は「お題/回答/投票」の画面を増やしていけます。
+          </p>
+        </div>
+      </section>
+
+      <section class="lobby" id="lobbyView" hidden aria-labelledby="lobbyTitle">
+        <div class="lobby__card">
+          <div class="lobby__head">
+            <h2 class="lobby__title" id="lobbyTitle">ロビー</h2>
+            <a class="link" href="#/" id="backHomeLink">ホームへ戻る</a>
+          </div>
+
+          <div class="lobby__grid">
+            <div class="card">
+              <h3 class="card__title">マッチング（仮）</h3>
+              <p class="card__text">
+                ここから対戦相手を探す想定です。今はダミー表示。
+              </p>
+              <div class="row">
+                <button class="btn btn--primary" id="queueBtn" type="button">
+                  マッチング開始
+                </button>
+                <button class="btn btn--secondary" id="cancelQueueBtn" type="button">
+                  キャンセル
+                </button>
+              </div>
+              <p class="muted" id="queueStatus" aria-live="polite"></p>
+            </div>
+            <div class="card">
+              <h3 class="card__title">部屋IDで参加（仮）</h3>
+              <p class="card__text">
+                友達と遊ぶ用の導線です（あとで実装）。
+              </p>
+              <div class="row">
+                <input
+                  class="input"
+                  id="roomIdInput"
+                  type="text"
+                  inputmode="text"
+                  placeholder="例: ABCD-1234"
+                  aria-label="部屋ID"
+                />
+                <button class="btn btn--secondary" id="joinRoomBtn" type="button">
+                  参加（ダミー）
+                </button>
+              </div>
+              <p class="muted" id="joinStatus" aria-live="polite"></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="prep" id="prepView" hidden aria-labelledby="prepTitle">
+        <div class="prep__card">
+          <div class="prep__head">
+            <h2 class="prep__title" id="prepTitle">対戦準備</h2>
+            <a class="link" href="#/lobby" id="backLobbyLink">ロビーへ戻る</a>
+          </div>
+
+          <div class="prep__grid">
+            <div class="card">
+              <h3 class="card__title">マッチング状況</h3>
+              <p class="card__text" id="prepStatus" aria-live="polite"></p>
+              <div class="muted" id="prepHint"></div>
+              <div class="row" style="margin-top: 12px">
+                <button class="btn btn--secondary" id="cancelMatchBtn" type="button">
+                  マッチングをやめる
+                </button>
+              </div>
+            </div>
+
+            <div class="card" id="opponentCard" hidden>
+              <h3 class="card__title">対戦相手</h3>
+              <div class="profile">
+                <div class="avatar" id="opponentAvatar" aria-hidden="true"></div>
+                <div class="profile__main">
+                  <div class="profile__name" id="opponentName"></div>
+                  <div class="profile__meta" id="opponentMeta"></div>
+                </div>
+              </div>
+              <div class="countdown" id="prepCountdown" aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="battle" id="battleView" hidden aria-labelledby="battleTitle">
+        <div class="battle__card">
+          <div class="battle__head">
+            <h2 class="battle__title" id="battleTitle">対戦（仮）</h2>
+            <a class="link" href="#/lobby" id="backLobbyLink2">ロビーへ戻る</a>
+          </div>
+          <div class="battle__meta">
+            <div class="pill">
+              <span class="pill__k">相手</span>
+              <span class="pill__v" id="battleOpponentName">-</span>
+            </div>
+            <div class="pill">
+              <span class="pill__k">ルーム</span>
+              <span class="pill__v" id="battleRoomId">-</span>
+            </div>
+          </div>
+
+          <div class="arena">
+            <div class="card">
+              <h3 class="card__title">お題</h3>
+              <p class="arena__prompt" id="battlePrompt">-</p>
+              <p class="muted" id="battlePhaseText" aria-live="polite"></p>
+            </div>
+
+            <div class="card">
+              <h3 class="card__title">回答（遠い言葉）</h3>
+              <form class="arena__form" id="answerForm">
+                <input
+                  class="input"
+                  id="answerInput"
+                  type="text"
+                  minlength="1"
+                  maxlength="30"
+                  placeholder="例: 月の裏側の挨拶"
+                  autocomplete="off"
+                />
+                <button class="btn btn--primary" id="submitAnswerBtn" type="submit">
+                  提出
+                </button>
+              </form>
+              <p class="muted" id="answerStatus" aria-live="polite"></p>
+            </div>
+
+            <div class="card" id="resultCard" hidden>
+              <h3 class="card__title">結果（仮）</h3>
+              <div class="result__row">
+                <div class="result__who">あなた</div>
+                <div class="result__text" id="myAnswerText">-</div>
+              </div>
+              <div class="result__row">
+                <div class="result__who" id="oppNameText">相手</div>
+                <div class="result__text" id="oppAnswerText">-</div>
+              </div>
+              <p class="muted">次は投票や勝敗判定を追加できます。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <dialog class="modal" id="loginModal" aria-labelledby="loginTitle">
+      <form class="modal__card" id="loginForm">
+        <div class="modal__head">
+          <h2 class="modal__title" id="loginTitle">ログイン</h2>
+          <button class="iconbtn" id="closeLoginBtn" type="button" aria-label="閉じる">
+            ×
+          </button>
+        </div>
+
+        <p class="modal__sub">
+          Firebase Authenticationでログインします（まずはGoogleログイン）。
+        </p>
+
+        <label class="field">
+          <span class="field__label">表示名</span>
+          <input
+            class="input"
+            id="displayNameInput"
+            name="displayName"
+            type="text"
+            autocomplete="nickname"
+            minlength="1"
+            maxlength="20"
+            placeholder="例: しんぷる太郎"
+          />
+        </label>
+
+        <div class="modal__actions">
+          <button class="btn btn--primary" id="googleLoginBtn" type="submit">
+            Googleでログイン
+          </button>
+          <button class="btn btn--ghost" id="cancelLoginBtn" type="button">
+            キャンセル
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <script type="module" src="./script.js"></script>
+  </body>
+</html>
+
